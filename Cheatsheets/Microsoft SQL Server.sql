@@ -142,6 +142,8 @@ REFERENCES [dbo].[tblGender]([id])
 ON DELETE SET NULL;
 -- ON DELETE CASCADE;
 
+DELETE FROM [dbo].[tblGender] WHERE id=3;
+
 
 
 
@@ -321,8 +323,229 @@ FROM {TABLE_NAME} {ALIAS_1}
 ON {JOIN_CONDITION}; -- If JOIN_TYPE <> CROSS JOIN
 
 
-DELETE FROM [dbo].[tblGender] WHERE id=3;
+
+
+
+-- Different ways to replace NULL in sql server
+SELECT ISNULL({EXPRESSION}, {REPLACEMENT_VALUE}) AS {ALIAS};
+
+SELECT CASE WHEN {EXPRESSION} IS NULL THEN {REPLACEMENT_VALUE} ELSE {EXPRESSION} END AS {ALIAS};
+
+SELECT COALESCE({EXPRESSION}, {REPLACEMENT_VALUE}) AS {ALIAS};
+-- COALESCE() can have multiple arguments and returns the first non-null value.
+
+
+
+
+
+-- UNION
+SELECT ...
+UNION
+SELECT ...
+...
+/*
+Differences between UNION and UNION ALL (Common Interview Question)
+From the output, it is very clear that, UNION removes duplicate rows, where as UNION ALL does not. When use UNION, to remove the duplicate rows, sql server has to to do a distinct sort, which is time consuming. For this reason, UNION ALL is much faster than UNION. 
+If you want to see the cost of DISTINCT SORT, you can turn on the estimated query execution plan using CTRL + L.
+For UNION and UNION ALL to work, the Number, Data types, and the order of the columns in the select statements should be same.
+If you want to sort, the results of UNION or UNION ALL, the ORDER BY caluse should be used on the last SELECT statement.
+*/
+
+
+
+
+
+-- Stored procedures
+
+-- Createing
+CREATE PROCEDURE spGetEmployeeCountByGender
+@Gender nvarchar(20),
+@EmployeeCount int OUTPUT
+AS
+BEGIN
+	SELECT @EmployeeCount = COUNT(id) 
+	FROM tblEmployee 
+	WHERE Gender = @Gender
+END;
+
+-- Executing
+DECLARE @EmployeeTotal int
+EXECUTE spGetEmployeeCountByGender 'Female', @EmployeeTotal OUTPUT
+PRINT @EmployeeTotal
+
+-- Changing
+ALTER PROCEDURE {PROC_NAME}
+...
+
+-- Encrypting the text of the SP
+ALTER PROCEDURE {PROC_NAME}
+...
+WITH ENCRYPTION
+AS
+...
+
+-- Deleting
+DROP PROCEDURE {PROC_NAME};
+
+-- Passing parameters in any order
+DECLARE @EmployeeTotal int
+EXECUTE spGetEmployeeCountByGender @EmployeeCount = @EmployeeTotal OUT, @Gender = 'Male'
+PRINT @EmployeeTotal
+
+/* The following system stored procedures, are extremely useful when working procedures.
+sp_help SP_Name: View the information about the stored procedure, like parameter names, their datatypes etc. sp_help can be used with any database object, like tables, views, SP's, triggers etc. Alternatively, you can also press ALT+F1, when the name of the object is highlighted.
+sp_helptext SP_Name : View the Text of the stored procedure if it is not encrypted.
+sp_depends SP_Name : View the dependencies of the stored procedure. This system SP is very useful, especially if you want to check, if there are any stored procedures that are referencing a table that you are abput to drop. sp_depends can also be used with other database objects like table etc.
+*/
+
+-- Returning values from SP
+CREATE PROCEDURE spGetTotalCountOfEmployees2
+AS
+BEGIN
+	RETURN (SELECT COUNT(id) FROM Employees)
+END
+
+-- Executing
+DECLARE @TotalEmployees int
+EXECUTE @TotalEmployees = spGetTotalCountOfEmployees2
+SELECT @TotalEmployees
+
+/*
+Difference between return values and output parameters
+
+Return value                     |Output Parameters
+---------------------------------|------------------------------------------
+Only integer data type           |Any data type
+---------------------------------|------------------------------------------
+Only one value                   |More than one value
+---------------------------------|------------------------------------------
+Use to convey success or failure |Use to return values like name, count, ...
+---------------------------------|------------------------------------------
+
+
+Advantages of using Stored Procedures
+1. Execution plan retention and reusability 
+2. Reduces network traffic
+3. Code reusability and better maintainability
+4. Better Security
+5. Avoids SQL Injection attack
+*/
+
+
+
+
+
+-- Some useful string functions
+
+-- ASCII(Character_Expression) - Returns the ASCII code of the given character expression.
+-- CHAR(Integer_Expression) - Converts an int ASCII code to a character. The Integer_Expression, should be between 0 and 255.
+-- Printing uppercase alphabets using CHAR() function:
+DECLARE @Number int
+SET @Number = 65
+WHILE(@Number <= 90)
+BEGIN
+	PRINT CHAR(@Number)
+	SET @Number = @Number + 1
+END;
+
+-- LTRIM(Character_Expression) - Removes blanks on the left handside of the given character expression.
+-- RTRIM(Character_Expression) - Removes blanks on the right hand side of the given character expression.
+-- LOWER(Character_Expression) - Converts all the characters in the given Character_Expression, to lowercase letters.
+-- UPPER(Character_Expression) - Converts all the characters in the given Character_Expression, to uppercase letters.
+
+-- REVERSE('Any_String_Expression') - Reverses all the characters in the given string expression.
+SELECT REVERSE('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+-- Output: ZYXWVUTSRQPONMLKJIHGFEDCBA
+
+-- LEN(String_Expression) - Returns the count of total characters, in the given string expression, excluding the blanks at the end of the expression.
+SELECT LEN('SQL Functions   ')
+-- Output: 13
+
+-- LEFT(Character_Expression, Integer_Expression) - Returns the specified number of characters from the left hand side of the given character expression.
+-- RIGHT(Character_Expression, Integer_Expression) - Returns the specified number of characters from the right hand side of the given character expression.
+
+-- CHARINDEX('Expression_To_Find', 'Expression_To_Search', 'Start_Location') - Returns the starting position of the specified expression in a character string. Start_Location parameter is optional.
+SELECT CHARINDEX('@','sara@aaa.com',1)
+-- Output: 5
+
+-- SUBSTRING('Expression', 'Start', 'Length') - As the name, suggests, this function returns substring (part of the string), from the given expression. You specify the starting location using the 'start' parameter and the number of characters in the substring using 'Length' parameter. All the 3 parameters are mandatory.
+SELECT SUBSTRING('John@bbb.com',6, 7)
+-- Output: bbb.com
+
+-- REPLICATE(String_To_Be_Replicated, Number_Of_Times_To_Replicate) - Repeats the given string, for the specified number of times.
+SELECT REPLICATE('Pragim', 3)
+-- Output: Pragim Pragim Pragim 
+
+-- SPACE(Number_Of_Spaces) - Returns number of spaces, specified by the Number_Of_Spaces argument.
+-- PATINDEX('%Pattern%', Expression) - Returns the starting position of the first occurrence of a pattern in a specified expression. If the specified pattern is not found, PATINDEX() returns ZERO.
+
+-- REPLACE(String_Expression, Pattern , Replacement_Value) - Replaces all occurrences of a specified string value with another string value.
+SELECT REPLACE(Email, '.com', '.net') as ConvertedEmail
+FROM tblEmployee;
+
+-- STUFF(Original_Expression, Start, Length, Replacement_expression) - Inserts Replacement_expression, at the start position specified, along with removing the charactes specified using Length parameter.
+SELECT STUFF(Email, 2, 3, '*****') as StuffedEmail
+FROM tblEmployee;
+
+
+
+
+
+-- DateTime functions
+-- GETDATE() - Get the current system date and time, where you have sql server installed.
+
+-- ISDATE() - Checks if the given value, is a valid date, time, or datetime. Returns 1 for success, 0 for failure.
+SELECT ISDATE('PRAGIM') -- returns 0
+SELECT ISDATE(Getdate()) -- returns 1
+SELECT ISDATE('2012-08-31 21:02:04.167') -- returns 1
+
+-- DAY() - Returns the 'Day number of the Month' of the given date
+SELECT DAY(GETDATE()) -- Returns the day number of the month, based on current system datetime.
+SELECT DAY('01/31/2012') -- Returns 31
+
+-- MONTH() - Returns the 'Month number of the year' of the given date
+SELECT Month(GETDATE()) -- Returns the Month number of the year, based on the current system date and time
+SELECT Month('01/31/2012') -- Returns 1
+
+-- YEAR() - Returns the 'Year number' of the given date
+SELECT Year(GETDATE()) -- Returns the year number, based on the current system date
+SELECT Year('01/31/2012') -- Returns 2012
+
+-- DateName(DatePart, Date) - Returns a string, that represents a part of the given date
+SELECT DATENAME(DAY, '2012-09-30 12:43:46.837') -- Returns 30
+SELECT DATENAME(WEEKDAY, '2012-09-30 12:43:46.837') -- Returns Sunday
+SELECT DATENAME(MONTH, '2012-09-30 12:43:46.837') -- Returns September
+
+/* Valid DatePart parameter values and their abbreviations
+
+DatePart    |Abbreviation
+------------|------------
+year        |yy, yyyy
+quater      |qq, q
+month       |mm, m
+dayofyear   |dy, y
+day         |dd, d
+week        |wk, ww
+weekday     |dw
+hour        |hh
+minute      |mi, n
+second      |ss, s
+millisecond |ms
+microsecond |mcs
+nanosecond  |ns
+TZoffset    |tz
+*/
+
+
+
+
+
+
+
+
 
 
 SELECT * FROM [dbo].[tblGender]
 SELECT * FROM [dbo].[tblPerson]
+-- https://www.pragimtech.com/courses/sql-server-tutorial-for-beginners/
+-- https://csharp-video-tutorials.blogspot.com/2014/05/sql-server-interview-questions-and.html
