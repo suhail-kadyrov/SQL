@@ -516,6 +516,17 @@ SELECT DATENAME(DAY, '2012-09-30 12:43:46.837') -- Returns 30
 SELECT DATENAME(WEEKDAY, '2012-09-30 12:43:46.837') -- Returns Sunday
 SELECT DATENAME(MONTH, '2012-09-30 12:43:46.837') -- Returns September
 
+-- DatePart(DatePart, Date) - Returns an integer representing the specified DatePart.
+SELECT DATEPART(WEEKDAY, '2012-08-30 19:45:31.793') -- returns 5
+
+-- DATEADD(datepart, NumberToAdd, date) - Returns the DateTime, after adding specified NumberToAdd, to the datepart specified of the given date.
+SELECT DATEADD(DAY, 20, '2012-08-30 19:45:31.793') -- Returns 2012-09-19 19:45:31.793
+SELECT DATEADD(DAY, -20, '2012-08-30 19:45:31.793') -- Returns 2012-08-10 19:45:31.793
+
+-- DATEDIFF(datepart, startdate, enddate) - Returns the count of the specified datepart boundaries crossed between the specified startdate and enddate.
+SELECT DATEDIFF(MONTH, '11/30/2005','01/31/2006') -- returns 2
+SELECT DATEDIFF(DAY, '11/30/2005','01/31/2006') -- returns 62
+
 /* Valid DatePart parameter values and their abbreviations
 
 DatePart    |Abbreviation
@@ -536,10 +547,43 @@ nanosecond  |ns
 TZoffset    |tz
 */
 
+/* Real Example
+Write a query to compute the age of a person, when the date of birth is given.
 
+CREATE FUNCTION fnComputeAge(@DOB DATETIME)
+RETURNS NVARCHAR(50)
+AS
+BEGIN
+DECLARE @tempdate DATETIME, @years INT, @months INT, @days INT
+SELECT @tempdate = @DOB
 
+SELECT @years = DATEDIFF(YEAR, @tempdate, GETDATE()) -
+						CASE
+							WHEN (MONTH(@DOB) > MONTH(GETDATE())) OR
+							(MONTH(@DOB) = MONTH(GETDATE()) AND DAY(@DOB) > DAY(GETDATE()))
+							THEN 1 ELSE 0
+						END
 
+SELECT @tempdate = DATEADD(YEAR, @years, @tempdate)
 
+SELECT @months = DATEDIFF(MONTH, @tempdate, GETDATE()) -
+						CASE
+							WHEN DAY(@DOB) > DAY(GETDATE())
+							THEN 1 ELSE 0
+						END
+SELECT @tempdate = DATEADD(MONTH, @months, @tempdate)
+
+SELECT @days = DATEDIFF(DAY, @tempdate, GETDATE())
+
+DECLARE @Age NVARCHAR(50)
+SET @Age = CAST(@years AS  NVARCHAR(4)) + ' Years ' + CAST(@months AS  NVARCHAR(2))+ ' Months ' +  CAST(@days AS  NVARCHAR(2))+ ' Days Old'
+RETURN @Age
+END;
+
+-- Executing
+SELECT id, name, DateOfBirth, dbo.fnComputeAge(DateOfBirth) AS Age FROM tblEmployees;
+
+*/
 
 
 
