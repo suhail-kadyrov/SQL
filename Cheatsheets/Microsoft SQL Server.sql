@@ -589,6 +589,186 @@ SELECT id, name, DateOfBirth, dbo.fnComputeAge(DateOfBirth) AS Age FROM tblEmplo
 
 
 
+-- To convert one data type to another, CAST and CONVERT functions can be used. 
+-- Syntax of CAST and CONVERT functions from MSDN:
+CAST ( expression AS data_type [ ( length ) ] )
+CONVERT ( data_type [ ( length ) ] , expression [ , style ] )
+
+SELECT id, name, DateOfBirth, CAST(DateofBirth AS nvarchar) AS ConvertedDOB
+FROM tblEmployees;
+SELECT id, name, DateOfBirth, CONVERT(nvarchar, DateOfBirth) AS ConvertedDOB
+FROM tblEmployees;
+
+-- with style
+SELECT id, name, DateOfBirth, CONVERT(nvarchar, DateOfBirth, 103) AS ConvertedDOB
+FROM tblEmployees;
+
+-- Complete list of all the Date and Time Styles:
+-- https://learn.microsoft.com/en-us/sql/t-sql/functions/cast-and-convert-transact-sql?redirectedfrom=MSDN&view=sql-server-ver16
+
+-- In SQL Server 2008, Date datatype is introduced, so you can also use
+SELECT CAST(GETDATE() as DATE)
+SELECT CONVERT(DATE, GETDATE())
+
+/*
+To control the formatting of the Date part, DateTime has to be converted to NVARCHAR using the styles provided. When converting to DATE data type, the CONVERT() function will ignore the style parameter.
+1. Cast is based on ANSI standard and Convert is specific to SQL Server. So, if portability is a concern and if you want to use the script with other database applications, use Cast(). 
+2. Convert provides more flexibility than Cast. For example, it's possible to control how you want DateTime datatypes to be converted using styles with convert function.
+The general guideline is to use CAST(), unless you want to take advantage of the style functionality in CONVERT().
+*/
+
+
+
+
+
+-- Mathematical functions in sql server
+-- ABS ( numeric_expression ) - ABS stands for absolute and returns, the absolute (positive) number. 
+SELECT ABS(-101.5) -- returns 101.5
+
+-- CEILING( numeric_expression ) returns the smallest integer value greater than or equal to the parameter.
+-- FLOOR( numeric_expression ) returns the largest integer less than or equal to the parameter. 
+SELECT CEILING(15.2) -- Returns 16
+SELECT CEILING(-15.2) -- Returns -15
+
+SELECT FLOOR(15.2) -- Returns 15
+SELECT FLOOR(-15.2) -- Returns -16
+
+-- POWER(expression, power) - Returns the power value of the specified expression to the specified power.
+SELECT POWER(2,3) -- Returns 8
+
+-- RAND([Seed_Value]) - Returns a random float number between 0 and 1. Rand() function takes an optional seed parameter. When seed value is supplied the RAND() function always returns the same value for the same seed.
+SELECT RAND(1) -- Always returns the same value
+
+-- To generate a random number between 1 and 100
+SELECT FLOOR(RAND() * 100)
+
+-- SQUARE ( Number ) - Returns the square of the given number.
+SELECT SQUARE(9) -- Returns 81
+
+-- SQRT ( Number ) - Returns the square root of the given number.
+Select SQRT(81) -- Returns 9
+
+/*
+ROUND ( numeric_expression , length [ ,function ] ) - Rounds the given numeric expression based on the given length. This function takes 3 parameters:
+1. Numeric_Expression is the number that we want to round.
+2. Length parameter, specifies the number of the digits that we want to round to. If the length is a positive number, then the rounding is applied for the decimal part, where as if the length is negative, then the rounding is applied to the number before the decimal.
+3. The optional function parameter, is used to indicate rounding or truncation operations. A value of 0, indicates rounding, where as a value of non zero indicates truncation. Default, if not specified is 0.
+*/
+-- Round to 2 places after (to the right) the decimal point
+SELECT ROUND(850.556, 2) -- Returns 850.560
+
+-- Truncate anything after 2 places, after (to the right) the decimal point
+SELECT ROUND(850.556, 2, 1) -- Returns 850.550
+
+-- Round to 1 place after (to the right) the decimal point
+SELECT ROUND(850.556, 1) -- Returns 850.600
+
+-- Truncate anything after 1 place, after (to the right) the decimal point
+SELECT ROUND(850.556, 1, 1) -- Returns 850.500
+
+-- Round the last 2 places before (to the left) the decimal point
+SELECT ROUND(850.556, -2) -- 900.000
+
+-- Round the last 1 place before (to the left) the decimal point
+SELECT ROUND(850.556, -1) -- 850.000
+
+
+
+
+
+-- UDF - User defined functions.
+-- 1. Scalar valued functions
+
+-- Scalar functions may or may not have parameters, but always return a single (scalar) value. The returned value can be of any data type, except text, ntext, image, cursor, and timestamp.
+CREATE FUNCTION Function_Name(@Parameter1 DataType, @Parameter2 DataType,..@Parametern Datatype)
+RETURNS Return_Datatype
+AS
+BEGIN
+    -- Function Body
+    RETURN Return_Datatype
+END;
+
+-- When calling a scalar user-defined function, you must supply a two-part name, OwnerName.FunctionName. dbo stands for database owner.
+SELECT dbo.Age('10/08/1982')
+
+-- You can also invoke it using the complete 3 part name, DatabaseName.OwnerName.FunctionName.
+SELECT SampleDB.dbo.Age('10/08/1982')
+
+-- Scalar user defined functions can be used in the Select and Where clause, as shown below.
+SELECT name, DateOfBirth, dbo.Age(DateOfBirth) AS Age 
+FROM tblEmployees
+WHERE dbo.Age(DateOfBirth) > 30
+
+-- To alter a function we use ALTER FUNCTION FunctionName statement and to delete it we use DROP FUNCTION FuncationName.
+-- To view the text of the function use sp_helptext FunctionName
+
+
+
+-- 2. Inline table valued functions
+CREATE FUNCTION Function_Name(@Param1 DataType, @Param2 DataType..., @ParamN DataType)
+RETURNS TABLE
+AS
+RETURN (Select_Statement)
+/*
+It is very similar to SCALAR function with the following differences
+1. We specify TABLE as the return type, instead of any scalar data type
+2. The function body is not enclosed between BEGIN and END block. Inline table valued function body cannot have BEGIN and END block.
+3. The structure of the table that gets returned is determined by the SELECT statement with in the function.
+*/
+
+--Example
+CREATE FUNCTION fn_EmployeesByGender(@Gender nvarchar(10))
+RETURNS TABLE
+AS
+RETURN (SELECT id, name, DateOfBirth, Gender, DepartmentId
+      FROM tblEmployees
+      WHERE Gender = @Gender)
+-- Calling the user defined function
+SELECT * FROM fn_EmployeesByGender('Male')
+
+/*
+Where can we use Inline Table Valued functions
+1. Inline Table Valued functions can be used to achieve the functionality of parameterized views.
+2. The table returned by the table valued function can also be used in joins with other tables.
+*/
+SELECT name, Gender, DepartmentName 
+FROM fn_EmployeesByGender('Male') E
+JOIN tblDepartment D ON D.Id = E.DepartmentId
+
+
+
+-- 3. Multi-statement Table Valued function (MSTVF)
+CREATE FUNCTION fn_MSTVF_GetEmployees()
+RETURNS @Table TABLE (Id int, name nvarchar(20), DOB date)
+AS
+BEGIN
+	INSERT INTO @Table
+	SELECT id, name, CAST(DateOfBirth AS date)
+	FROM tblEmployees
+	RETURN
+END
+
+-- Calling the Multi-statement Table Valued Function:
+SELECT * FROM fn_MSTVF_GetEmployees()
+
+/*
+The differences between Inline Table Valued functions and Multi-statement Table Valued functions
+1. In an Inline Table Valued function the RETURNS clause cannot contain the structure of the table, the function returns. Where as, with the multi-statement table valued function, we specify the structure of the table that gets returned
+2. Inline Table Valued function cannot have BEGIN and END block, where as the multi-statement function can have.
+3. Inline Table valued functions are better for performance, than multi-statement table valued functions. If the given task, can be achieved using an inline table valued function, always prefer to use them, over multi-statement table valued functions.
+4. It's possible to update the underlying table, using an inline table valued function, but not possible using multi-statement table valued function.
+
+Updating the underlying table using inline table valued function: 
+This query will change Sam to Sam1, in the underlying table tblEmployees. When you try do the same thing with the multi-statement table valued function, you will get an error stating 'Object 'fn_MSTVF_GetEmployees' cannot be modified.'
+UPDATE fn_ILTVF_GetEmployees() SET name='Sam1' WHERE id = 1
+
+Reason for improved performance of an inline table valued function:
+Internally, SQL Server treats an inline table valued function much like it would a view and treats a multi-statement table valued function similar to how it would a stored procedure.
+*/
+
+
+
+
 SELECT * FROM [dbo].[tblGender]
 SELECT * FROM [dbo].[tblPerson]
 -- https://www.pragimtech.com/courses/sql-server-tutorial-for-beginners/
